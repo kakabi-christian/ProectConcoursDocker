@@ -1,0 +1,32 @@
+services:
+  # 1. La Base de données
+  db:
+    image: postgres:15-alpine
+    container_name: concours-db
+    restart: always
+    environment:
+      POSTGRES_USER: user_concours
+      POSTGRES_PASSWORD: password_safe
+      POSTGRES_DB: db_concours
+    ports:
+      - "5432:5432"
+
+  # 2. Le Backend (NestJS)
+  backend:
+    build: ./backend/backend
+    container_name: concours-api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    env_file:
+      - ./backend/backend/.env
+
+  # 3. Le Frontend (React)
+  frontend:
+    build: ./frontend
+    container_name: concours-ui
+    ports:
+      - "3001:80"  # <--- CHANGÉ ICI : 3001 (ton PC) vers 80 (Nginx Docker)
+    depends_on:
+      - backend
