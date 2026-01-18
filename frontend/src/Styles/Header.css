@@ -1,0 +1,32 @@
+.Blue {
+    height: 31px;
+    background-color: #1E90FF;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+}
+
+.logo-img {
+    width: 70px;
+    height: 70px;
+}
+.active-link {
+  color: #1E90FF !important;
+  border-bottom: 3px solid #1E90FF;
+  padding-bottom: 2px;
+}
+
+/* Style des liens */
+.navbar-nav .nav-link {
+    color: black;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Login & Register */
+.btn:hover {
+    color: #25963F !important;
+    text-decoration: underline;
+}

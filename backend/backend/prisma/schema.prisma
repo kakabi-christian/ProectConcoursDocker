@@ -1,0 +1,634 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ENUMS
+//
+enum Region {
+  ADAMAOUA
+  CENTRE
+  EST
+  EXTREME_NORD
+  LITTORAL
+  NORD
+  NORD_OUEST
+  OUEST
+  SUD
+  SUD_OUEST
+}
+enum ConcoursStatus {
+  PLANIFIE    // Le concours est créé mais les inscriptions n'ont pas encore commencé
+  OUVERT      // Inscriptions en cours
+  CLOTURE     // Inscriptions terminées (automatique ou manuel)
+  ANNULE      // Concours annulé pour cette session
+}
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  ALERT
+  SYSTEM
+  DOSSIER_STATUS
+}
+enum DocStatus {
+  PENDING    // En attente de vérification admin
+  VALIDATED  // Dossier accepté
+  REJECTED   // Dossier refusé (message envoyé au candidat)
+  DRAFT      // Le candidat peut modifier son dossier
+}
+
+enum StatutEcole {
+  OUVERT
+  FERME
+}
+
+enum UserType {
+  ADMIN
+  CANDIDATE
+  SUPERADMIN
+}
+enum TypeBac {
+  GENERAL
+  TECHNIQUE
+  PROFESSIONNEL
+}
+
+enum TypeMention {
+  PASSABLE
+  BIEN
+  TRES_BIEN
+  EXCELLENT
+  ASSEZ_BIEN
+}
+enum Sexe {
+  MASCULIN
+  FEMININ
+}
+
+
+
+model User {
+  id              String          @id @default(uuid())
+  email           String          @unique
+  password        String?
+  nom             String?
+  prenom          String?
+  image      String?  // <--- AJOUTE CETTE LIGNE ICI pour stocker l'URL de la photo
+  telephone       String?
+  isVerified      Boolean         @default(true)
+  region          Region?
+  userType        UserType        @default(CANDIDATE)
+  
+  // Relations
+  roles           UserRole[]
+  feedbacks       Feedback[]
+  notifications   Notifications[]
+  recus           Recu[]
+  admin           Admin?        // ✔ pour les admins
+  candidate       Candidate?    // ✔ pour les candidats
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+// 1. Représente une discussion entre deux ou plusieurs admins
+model Conversation {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relation vers les messages
+  messages  ChatMessage[]
+  
+  // Relation vers les participants (Admins uniquement)
+  participants AdminConversation[]
+}
+
+// 2. Table de liaison pour savoir quels admins sont dans quelle conversation
+model AdminConversation {
+  id             String       @id @default(uuid())
+  adminId        String
+  conversationId String
+  
+  admin          Admin        @relation(fields: [adminId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@unique([adminId, conversationId])
+}
+
+// 3. Le message en lui-même
+model ChatMessage {
+  id             String       @id @default(uuid())
+  content        String       @db.Text
+  senderId       String       // ID de l'Admin qui envoie
+  conversationId String
+  isRead         Boolean      @default(false)
+  isEdited    Boolean   @default(false)
+  isDeleted   Boolean   @default(false) // On fait un "soft delete" pour garder la trace
+  isPinned    Boolean   @default(false)
+  pinnedUntil DateTime? // Pour gérer les 3j, 7j, 30j
+  replyToId      String?      // ID du message auquel on répond
+  replyTo        ChatMessage? @relation("ReplyTo", fields: [replyToId], references: [id])
+  replies        ChatMessage[] @relation("ReplyTo")
+  
+  // Pour le transfert
+  isForwarded Boolean   @default(false)
+  
+  createdAt      DateTime     @default(now())
+
+  sender         Admin        @relation(fields: [senderId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+}
+
+
+model Role {
+  id              String          @id @default(uuid())
+  name            String
+  description     String?
+  
+  // Relations
+  users           UserRole[]
+  permissions     RolePermission[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Permission {
+  id              String          @id @default(uuid())
+  name            String          @unique
+  description     String?
+
+  // Relations
+  roles           RolePermission[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model UserRole {
+  id              String          @id @default(uuid())
+  userId          String
+  roleId          String
+
+  user            User            @relation(fields: [userId], references: [id])
+  role            Role            @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+  createdAt       DateTime        @default(now())
+}
+
+model RolePermission {
+  id              String          @id @default(uuid())
+  roleId          String
+  permissionId    String
+
+  role            Role            @relation(fields: [roleId], references: [id])
+  permission      Permission      @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+  createdAt       DateTime        @default(now())
+}
+
+
+
+model Admin {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  codeAdmin       String?        
+  departementId   String?
+  conversations   AdminConversation[]
+  sentMessages    ChatMessage[]
+
+  user            User            @relation(fields: [userId], references: [id])
+  departement     Departement?    @relation(fields: [departementId], references: [id])
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Candidate {
+  id              String              @id @default(uuid())
+
+  // 🔑 CLÉ ÉTRANGÈRE VERS USER
+  userId          String              @unique
+  user            User                @relation(fields: [userId], references: [id])
+
+  matricule       String?             @unique
+  dateNaissance   DateTime?
+  lieuNaissance   String?
+  sexe            Sexe?
+  nationalite     String?
+  ville           String?
+
+  telephonePere   String?
+  nomPere         String?
+  telephoneMere   String?
+  nomMere         String?
+  qrCode          String?             // <--- AJOUTE CETTE LIGNE ICI
+
+  // Relations
+  enrollements    Enrollement[]
+  paiements       Paiement[]
+  documents       Documents?
+  // 🆕 AJOUT : Relation avec la nouvelle table Dossier
+  dossier         Dossier?
+  recus           Recu[]
+  specialites     CandidatSpecialite[]
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+model CandidatSpecialite {
+  id              String              @id @default(uuid())
+  candidatId      String
+  specialiteId    String
+
+  candidat        Candidate           @relation(fields: [candidatId], references: [id])
+  specialite      Specialite          @relation(fields: [specialiteId], references: [id])
+
+  @@unique([candidatId, specialiteId])
+  createdAt       DateTime            @default(now())
+}
+
+model Documents {
+  id              String          @id @default(uuid())
+  numeroCni         String?
+  typeExamen   TypeBac
+  serie           String? 
+  Mention     TypeMention
+  
+  candidateId     String          @unique
+  candidate       Candidate       @relation(fields: [candidateId], references: [id])
+  
+  enrollementId   String?         @unique
+  enrollement     Enrollement?    @relation("EnrollementDocuments")
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Paiement {
+  id                String      @id @default(uuid())
+  montantTotal      Float?
+  datePaiement      DateTime    @default(now())
+
+  // Informations du formulaire de paiement (avant inscription)
+  nomComplet        String?     // Nom saisi lors du paiement
+  prenom            String?     // Prénom saisi lors du paiement
+  email             String?     // Email saisi lors du paiement
+  telephone         String?     // Téléphone saisi lors du paiement
+
+  // Informations de la transaction
+  modePaiement      String?     // "ORANGE_MONEY" ou "MTN_MOMO"
+  numeroTransaction String?     // Ex: "MTN-2025-12345"
+  statut            String      @default("PENDING") // PENDING, SUCCESS, FAILED
+
+  // 🔹 Relation vers le concours sélectionné lors du paiement
+  concoursId        String?     
+  concours          Concours?   @relation(fields: [concoursId], references: [id])
+
+  // 🔹 Relations optionnelles (liées plus tard lors de l'inscription)
+  candidatId        String?
+  candidat          Candidate?  @relation(fields: [candidatId], references: [id])
+
+  // 🔹 Relation avec l'enrollement
+  enrollementId     String?     @unique
+  enrollement       Enrollement? @relation(fields: [enrollementId], references: [id])
+
+  // 🔹 Relation avec le reçu
+  recu              Recu?       // relation inverse (1:1)
+  external_reference String?    @unique // Ajoute @unique ici si possible pour des recherches rapides
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  nom       String
+  dateDebut DateTime
+  dateFin   DateTime
+
+  // Relation 1:1 avec Concours (optionnelle)
+  concours  Concours[] // pas besoin de fields/references ici
+
+  enrollements Enrollement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Concours {
+  id                    String          @id @default(uuid())
+  code                  String          @unique
+  intitule              String
+  montant               Float?
+  
+  // --- NOUVEAUX CHAMPS DE GESTION ---
+  statut                ConcoursStatus  @default(PLANIFIE)
+  dateDebutInscription  DateTime        @default(now())
+  dateFinInscription    DateTime?
+  // ----------------------------------
+
+  anneeId               String
+  annee                 Annee?          @relation(fields: [anneeId], references: [id])
+
+  sessionId             String?  
+  session               Session?        @relation(fields: [sessionId], references: [id])
+  
+
+  enrollements          Enrollement[]
+  paiements             Paiement[]
+  piecesDossier         PieceDossier[]  @relation("ConcoursPieces")
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+}
+model Enrollement {
+  id                String            @id @default(uuid())
+  candidatId        String
+  candidat          Candidate         @relation(fields: [candidatId], references: [id])
+  
+  concoursId        String
+  concours          Concours          @relation(fields: [concoursId], references: [id])
+  
+  sessionId         String?
+  session           Session?            @relation(fields: [sessionId], references: [id])
+  
+  documentId        String?             @unique
+  document          Documents?          @relation("EnrollementDocuments", fields: [documentId], references: [id])
+    
+  paiement          Paiement?
+
+  centreExamenId    String? 
+  centreExamen      CentreExamen?       @relation(fields: [centreExamenId], references: [id])
+  
+  // --- AJOUTS POUR LE DISPATCHING ---
+  salleId           String?             // La salle affectée
+  salle             Salle?              @relation(fields: [salleId], references: [id])
+  numeroTable       Int?                // Le numéro de place dans la salle
+  // ----------------------------------
+
+  centreDepotId     String? 
+  centreDepot       CentreDepot?        @relation(fields: [centreDepotId], references: [id])
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+model Annee {
+  id              String          @id @default(uuid())
+  libelle         String?         @unique
+  dateDebut       DateTime?
+  dateFin         DateTime?
+  estActive       Boolean         @default(true)
+
+  concours        Concours[]
+  archives        Archive[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Departement {
+  id              String          @id @default(uuid())
+  nomDep         String          @unique
+
+  filieres        Filiere[]
+  admins          Admin[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Filiere {
+  id              String        @id @default(uuid())
+  intitule        String
+  description     String?
+
+  departementId   String?
+  departement     Departement?  @relation(fields: [departementId], references: [id])
+
+  epreuves        Epreuve[]
+  specialites     Specialite[]  // ✅ relation avec Specialite
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+
+model Epreuve {
+  id              String          @id @default(uuid())
+  nomEpreuve      String
+  nonEliminatoire Boolean?
+
+  filiereId       String
+  filiere         Filiere         @relation(fields: [filiereId], references: [id])
+
+  specialiteId    String?         // ✅ liaison optionnelle avec Specialite
+  specialite      Specialite?     @relation(fields: [specialiteId], references: [id])
+
+  niveauId        String?
+  niveau          Niveau?         @relation(fields: [niveauId], references: [id])
+    
+  archives        Archive[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+
+model Niveau {
+  id              String          @id @default(uuid())
+  intitule        String
+  code            String?         @unique
+  ordre           Int?
+
+  epreuves        Epreuve[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+model Salle {
+  id          String   @id @default(uuid())
+  codeClasse  String   @unique // Sera généré : CF100, CF101...
+  capacite    Int      @default(50)
+  
+  batimentId  String
+  batiment    Batiment @relation(fields: [batimentId], references: [id])
+
+  // --- RELATION INVERSE AJOUTÉE ---
+  // Permet de lister tous les candidats (enrollements) affectés à cette salle
+  enrollements Enrollement[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model Batiment {
+  id          String   @id @default(uuid())
+  nom         String   @unique // ex: "Bloc Pédagogique"
+  code        String   @unique // ex: "CF", "CG"
+  salles      Salle[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Specialite {
+  id          String   @id @default(uuid())
+  libelle     String
+  code        String   @unique
+  isActive    Boolean  @default(true)
+
+  filiereId   String?                // clé étrangère optionnelle
+  filiere     Filiere? @relation(fields: [filiereId], references: [id])
+
+  candidats   CandidatSpecialite[]
+
+  epreuves    Epreuve[]              // ✅ relation inverse : une spécialité a plusieurs épreuves
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+
+
+model CentreExamen {
+  id              String          @id @default(uuid())
+  intitule        String
+  lieuCentre      String?  
+  enrollements    Enrollement[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model CentreDepot {
+  id              String          @id @default(uuid())
+  intitule        String
+  lieuDepot       String          @unique
+  enrollements    Enrollement[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+
+
+model PieceDossier {
+  id        String     @id @default(uuid())
+  nom       String     // ex: "Photo de la CNI"
+  code      String? // ex: "photoCni", "photoDiplome"
+  
+  concours  Concours[] @relation("ConcoursPieces")
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+model Dossier {
+  id                String    @id @default(uuid())
+  
+  // Champs de stockage des fichiers (URLs ou Chemins)
+  photoCni          String?
+  photoDiplome      String?
+  photoProfil       String?
+  photoActeNaiss    String?
+  photoRecuPaiement String?
+
+  // Un seul champ statut pour tout le dossier
+  statut            DocStatus @default(DRAFT)
+  
+  commentaire       String?
+
+  // Relation 1:1 avec le Candidat
+  candidateId       String    @unique
+  candidate         Candidate @relation(fields: [candidateId], references: [id])
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+model Recu {
+  id            String   @id @default(uuid())
+  numeroRecu    String   @unique
+  montant       Float?
+  telephone     String?
+  concours      String?
+  estUtilise    Boolean  @default(false)
+  
+  // Relations
+  candidatId    String?
+  candidat      Candidate? @relation(fields: [candidatId], references: [id])
+
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id])
+
+  paiementId    String?     @unique
+  paiement      Paiement?   @relation(fields: [paiementId], references: [id])
+
+  qrCode        String?     // <-- Champ ajouté pour stocker le QR Code en base64
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+
+
+model Archive {
+  id        String   @id @default(uuid())
+  epreuveId String
+  anneeId   String
+
+  epreuve   Epreuve  @relation(fields: [epreuveId], references: [id])
+  annee     Annee    @relation(fields: [anneeId], references: [id])
+
+  fileUrl   String   // <-- champ pour stocker l'URL ou chemin du fichier
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Otp {
+  id        String   @id @default(uuid())
+  email     String
+  code      String   // Code à 6 chiffres
+  expiresAt DateTime // Expiration (10 minutes)
+  isUsed    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([email, code])
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String @unique
+  comment   String
+  note      Int      // Ajout du champ note (1 à 5)
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notifications {
+  id              String          @id @default(uuid())
+  userId          String
+  message         String
+  type            NotificationType
+  isRead          Boolean         @default(false)
+  isBroadcast     Boolean         @default(false)
+  sentAt          DateTime?
+
+  user            User            @relation(fields: [userId], references: [id])
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
