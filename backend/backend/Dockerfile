@@ -32,20 +32,21 @@ FROM node:20-alpine
 # 2. Dossier de travail
 WORKDIR /app
 
-# 3. On copie TOUT le contenu du dossier courant (backend/backend)
-# Cela inclut package.json, src, src/prisma, etc.
+# 3. On copie tout
 COPY . .
 
-# 4. On installe les dépendances
+# 4. COMMANDE DE DIAGNOSTIC (pour voir où on est dans les logs Railway)
+RUN ls -la
+
+# 5. On installe les dépendances
+# Si le package.json est là, ça passera.
 RUN npm install
 
-# 5. On génère le client Prisma 
-# Puisque tout est copié, il trouvera le schéma dans src/prisma/schema.prisma
+# 6. Génération Prisma avec le chemin complet que tu as montré tout à l'heure
 RUN npx prisma generate --schema=./src/prisma/schema.prisma
 
-# 6. On compile le projet
+# 7. Build
 RUN npm run build
 
-# 7. Port et Lancement
 EXPOSE 3000
 CMD ["node", "dist/src/main.js"]
