@@ -26,34 +26,26 @@
 # # 9. La commande pour lancer l'application
 # # On pointe vers dist/src/main.js car c'est là que NestJS a compilé ton main.ts
 # CMD ["node", "dist/src/main.js"]
-# 1. On part d'une image Node.js légère
+# 1. Image de base
 FROM node:20-alpine
 
-# 2. On définit le dossier de travail dans le conteneur
+# 2. Dossier de travail
 WORKDIR /app
 
-# 3. On copie les fichiers de configuration en premier
-COPY package*.json ./
-
-# 4. CORRECTION : On cible le dossier prisma qui est dans src
-# On le place dans ./prisma/ pour que NestJS et Prisma le trouvent facilement
-COPY src/prisma ./prisma/
-
-# 5. On installe les dépendances
-RUN npm install
-
-# 6. On copie tout le reste du code source
+# 3. On copie TOUT le contenu du dossier courant (backend/backend)
+# Cela inclut package.json, src, src/prisma, etc.
 COPY . .
 
-# 7. On génère le client Prisma (indispensable pour les requêtes DB)
-RUN npx prisma generate
+# 4. On installe les dépendances
+RUN npm install
 
-# 8. On compile le projet NestJS
+# 5. On génère le client Prisma 
+# Puisque tout est copié, il trouvera le schéma dans src/prisma/schema.prisma
+RUN npx prisma generate --schema=./src/prisma/schema.prisma
+
+# 6. On compile le projet
 RUN npm run build
 
-# 9. On expose le port 3000
+# 7. Port et Lancement
 EXPOSE 3000
-
-# 10. La commande pour lancer l'application
-# Ton ls montre que le main.js est dans dist/src/main.js
 CMD ["node", "dist/src/main.js"]
