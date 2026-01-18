@@ -32,21 +32,19 @@ FROM node:20-alpine
 # 2. Dossier de travail
 WORKDIR /app
 
-# 3. On copie le contenu du dossier backend/backend vers la racine /app du conteneur
-# Comme Railway build depuis la racine du projet, on doit spécifier le chemin source
+# 3. On copie le contenu du backend
 COPY ./backend/backend/ .
 
-# 4. On vérifie à nouveau (pour être sûr de voir package.json cette fois)
-RUN ls -la
-
-# 5. On installe les dépendances
+# 4. On installe les dépendances
 RUN npm install
 
-# 6. Génération Prisma (le dossier prisma est maintenant à la racine /app/src/prisma)
-RUN npx prisma generate --schema=./src/prisma/schema.prisma
+# 5. CORRECTION : Génération Prisma
+# On essaie le chemin direct sans le ./ au début
+RUN npx prisma generate --schema=src/prisma/schema.prisma
 
-# 7. Build
+# 6. Build du projet
 RUN npm run build
 
+# 7. Port et Lancement
 EXPOSE 3000
 CMD ["node", "dist/src/main.js"]
