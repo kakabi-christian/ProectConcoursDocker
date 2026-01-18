@@ -1,13 +1,16 @@
 // src/services/api.js
 import axios from 'axios';
 
+// Ajout d'un log pour vérifier quelle URL est réellement utilisée au démarrage
+console.log("[DEBUG] API Base URL:", process.env.REACT_APP_API_URL);
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL,
+  // Si la variable est vide, on force l'URL de production
+  baseURL: process.env.REACT_APP_API_URL || 'https://concours-app.up.railway.app',
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
 // Liste des routes publiques qui ne nécessitent pas de token (ex: paiement, liste concours)
 const PUBLIC_ROUTES = [
   '/paiement',
