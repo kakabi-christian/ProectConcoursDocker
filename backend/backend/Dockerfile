@@ -33,25 +33,27 @@ FROM node:20-alpine
 WORKDIR /app
 
 # 3. On copie les fichiers de configuration en premier
-# Utilisation de ./ pour bien cibler les dossiers locaux
 COPY package*.json ./
-COPY ./prisma ./prisma/
 
-# 4. On installe les dépendances
+# 4. CORRECTION : On cible le dossier prisma qui est dans src
+# On le place dans ./prisma/ pour que NestJS et Prisma le trouvent facilement
+COPY src/prisma ./prisma/
+
+# 5. On installe les dépendances
 RUN npm install
 
-# 5. On copie tout le reste du code source du dossier backend/backend
+# 6. On copie tout le reste du code source
 COPY . .
 
-# 6. On génère le client Prisma
+# 7. On génère le client Prisma (indispensable pour les requêtes DB)
 RUN npx prisma generate
 
-# 7. On compile le projet NestJS
+# 8. On compile le projet NestJS
 RUN npm run build
 
-# 8. On expose le port (Railway utilise souvent 3000 par défaut)
+# 9. On expose le port 3000
 EXPOSE 3000
 
-# 9. La commande pour lancer l'application
-# NestJS compile généralement dans dist/main.js ou dist/src/main.js
+# 10. La commande pour lancer l'application
+# Ton ls montre que le main.js est dans dist/src/main.js
 CMD ["node", "dist/src/main.js"]
