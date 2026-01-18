@@ -32,15 +32,15 @@ FROM node:20-alpine
 # 2. Dossier de travail
 WORKDIR /app
 
-# 3. On copie le contenu du backend
+# 3. On copie tout le contenu du backend
 COPY ./backend/backend/ .
 
 # 4. On installe les dépendances
 RUN npm install
 
-# 5. CORRECTION : Génération Prisma
-# On essaie le chemin direct sans le ./ au début
-RUN npx prisma generate --schema=src/prisma/schema.prisma
+# 5. RECHERCHE ET GÉNÉRATION (La solution magique)
+# On cherche où est le fichier et on lance la génération sur le résultat trouvé
+RUN npx prisma generate --schema=$(find . -name schema.prisma)
 
 # 6. Build du projet
 RUN npm run build
