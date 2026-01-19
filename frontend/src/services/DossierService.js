@@ -86,19 +86,36 @@ export const DOSSIER_STATUS = {
  * Helper pour construire l'URL complète d'une image/PDF
  * Utilise dynamiquement la baseURL de l'instance API
  */
+// export const getFileUrl = (path) => {
+//   if (!path) return null;
+//   if (path.startsWith('http')) return path;
+  
+//   // On récupère dynamiquement la baseURL définie dans ton api.js
+//   const baseUrl = api.defaults.baseURL; 
+  
+//   // On s'assure qu'il n'y a pas de double slash
+//   const cleanBase = baseUrl.replace(/\/$/, '');
+//   const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  
+//   return `${cleanBase}${cleanPath}`;
+// };
 export const getFileUrl = (path) => {
   if (!path) return null;
+  
+  // Si le path est déjà une URL complète (ex: photo Google ou déjà préfixé), on le retourne
   if (path.startsWith('http')) return path;
+
+  // On utilise l'URL du backend définie dans ton .env
+  // Si REACT_APP_API_URL n'est pas chargé, on met l'URL en dur par sécurité
+  const baseUrl = process.env.REACT_APP_API_URL || 'https://concours-app.up.railway.app';
   
-  // On récupère dynamiquement la baseURL définie dans ton api.js
-  const baseUrl = api.defaults.baseURL; 
-  
-  // On s'assure qu'il n'y a pas de double slash
+  // Nettoyage des slashs pour éviter "https://site.com//uploads"
   const cleanBase = baseUrl.replace(/\/$/, '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   
   return `${cleanBase}${cleanPath}`;
 };
+
 /**
  * Récupérer le QR Code d'un candidat par son userId
  */
