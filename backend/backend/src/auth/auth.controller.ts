@@ -86,9 +86,12 @@ async googleAuthRedirect(@Req() req, @Res() res) {
 
   // On redirige vers la home du candidat
   // On passe le token et les infos essentielles dans l'URL pour que React les stocke
-  return res.redirect(
-    `http://localhost:3001/candidat/home?token=${token}&step=${registrationStep}&candidateId=${candidateId}`
-  );
+  // On utilise la variable FRONTEND_URL définie dans ton .env
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+
+return res.redirect(
+    `${frontendUrl}/candidat/home?token=${token}&step=${registrationStep}&candidateId=${candidateId}`
+);
 }
 
 // ==================== AUTHENTIFICATION GITHUB ====================
@@ -112,10 +115,13 @@ async googleAuthRedirect(@Req() req, @Res() res) {
     const registrationStep = result.registrationStep;
     const candidateId = result.user.candidateId || '';
 
-    // Redirection vers ton Frontend (ajuste le port 3001 si nécessaire)
-    return res.redirect(
-      `http://localhost:3001/candidat/home?token=${token}&step=${registrationStep}&candidateId=${candidateId}`
-    );
+   // Récupère l'URL du frontend depuis les variables d'environnement
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+
+// Redirection dynamique
+return res.redirect(
+  `${frontendUrl}/candidat/home?token=${token}&step=${registrationStep}&candidateId=${candidateId}`
+);
   }
 
   // ==================== LISTER LES ADMINS (PAGINATION) ====================
