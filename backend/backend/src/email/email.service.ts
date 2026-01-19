@@ -12,28 +12,29 @@ export class EmailService {
     this.initializeTransporter();
   }
 
-  private initializeTransporter() {
+ private initializeTransporter() {
     const user = this.configService.get<string>('EMAIL_USER');
     const pass = this.configService.get<string>('EMAIL_PASS');
 
-    this.logger.log(`[EmailService] Initialisation pour l'utilisateur: ${user}`);
+    this.logger.log(`[EmailService] Tentative d'initialisation sur le PORT 587...`);
 
     this.transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port:587,
-      secure: true, // Utilisation de SSL/TLS direct
+      port: 587,
+      secure: false, // Doit être false pour le port 587
       auth: { user, pass },
       tls: {
-        rejectUnauthorized: false, // Évite les blocages de certificats sur Railway
+        rejectUnauthorized: false, 
+        ciphers: 'SSLv3' // Aide parfois à passer les pare-feu stricts
       },
-      connectionTimeout: 15000, // 15 secondes d'attente max
+      connectionTimeout: 20000, // On augmente encore un peu
     });
 
     this.transporter.verify((error) => {
       if (error) {
-        this.logger.error(`[EmailService] ❌ Échec de configuration: ${error.message}`);
+        this.logger.error(`[EmailService] ❌ Échec sur Port 587: ${error.message}`);
       } else {
-        this.logger.log('[EmailService] ✅ Le transporteur est prêt à envoyer des emails');
+        this.logger.log('[EmailService] ✅ Port 587 opérationnel. Prêt à envoyer !');
       }
     });
   }
