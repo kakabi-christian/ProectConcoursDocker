@@ -173,19 +173,38 @@ export class PaiementService {
     };
   }
 
-  async requestOtp(requestOtpDto: RequestOtpDto) {
-    const { email } = requestOtpDto;
-    const recu = await this.prisma.recu.findFirst({ where: { paiement: { email } } });
-    if (!recu) throw new NotFoundException('Aucun reçu trouvé');
+// Remplace uniquement la méthode requestOtp dans src/paiement/paiement.service.ts
+async requestOtp(requestOtpDto: RequestOtpDto) {
+  const { email } = requestOtpDto;
+  this.logger.log(`[PaiementService] 🔍 Recherche de reçu pour: ${email}`);
 
-    await this.prisma.otp.deleteMany({ where: { email, isUsed: false } });
-    const code = this.generateOtpCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    await this.prisma.otp.create({ data: { email, code, expiresAt } });
-    await this.emailService.sendOtpEmail(email, code);
-    return { message: 'OTP envoyé', email };
+  const recu = await this.prisma.recu.findFirst({ 
+    where: { paiement: { email } } 
+  });
+
+  if (!recu) {
+    this.logger.warn(`[PaiementService] ⚠️ Aucun reçu trouvé pour l'email: ${email}`);
+    throw new NotFoundException('Aucun reçu trouvé pour cet email.');
   }
 
+  this.logger.log(`[PaiementService] 🎫 Reçu trouvé. Nettoyage des anciens OTP...`);
+  await this.prisma.otp.deleteMany({ where: { email, isUsed: false } });
+
+  const code = this.generateOtpCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  this.logger.log(`[PaiementService] 💾 Enregistrement du nouvel OTP en base...`);
+  await this.prisma.otp.create({ 
+    data: { email, code, expiresAt } 
+  });
+
+  this.logger.log(`[PaiementService] 📧 Appel du service email pour envoyer le code: ${code}`);
+  
+  // On attend l'envoi de l'email
+  await this.emailService.sendOtpEmail(email, code);
+
+  return { message: 'OTP envoyé avec succès', email };
+}
   async verifyOtpAndGetRecu(verifyOtpDto: VerifyOtpDto) {
     const { email, code } = verifyOtpDto;
     const otp = await this.prisma.otp.findFirst({
