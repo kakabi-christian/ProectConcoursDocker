@@ -12,62 +12,79 @@ export class EmailService {
     this.initializeTransporter();
   }
 
- private initializeTransporter() {
+  private initializeTransporter() {
     const user = this.configService.get<string>('EMAIL_USER');
     const pass = this.configService.get<string>('EMAIL_PASS');
+    const service = this.configService.get<string>('EMAIL_SERVICE');
 
-    this.logger.log(`[EmailService] Tentative d'initialisation sur le PORT 587...`);
+    this.logger.log(`[EmailService] 🚀 DÉMARRAGE DU SERVICE EMAIL`);
+    this.logger.log(`[EmailService] Configuration : User=${user}, Service=${service}`);
 
+    // Configuration optimisée pour Railway (Port 587)
     this.transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
-      secure: false, // Doit être false pour le port 587
-      auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false, 
-        ciphers: 'SSLv3' // Aide parfois à passer les pare-feu stricts
+      secure: false, // false pour STARTTLS (port 587)
+      auth: {
+        user: user,
+        pass: pass,
       },
-      connectionTimeout: 20000, // On augmente encore un peu
+      tls: {
+        // Paramètres critiques pour passer les pare-feu cloud
+        rejectUnauthorized: false, 
+        minVersion: 'TLSv1.2'
+      },
+      connectionTimeout: 20000, // 20 secondes d'attente
+      greetingTimeout: 20000,
+      socketTimeout: 25000,
     });
 
-    this.transporter.verify((error) => {
+    // Test de connexion immédiat au démarrage
+    this.logger.log(`[EmailService] 🔍 Test de connexion au serveur SMTP Gmail (Port 587)...`);
+    this.transporter.verify((error, success) => {
       if (error) {
-        this.logger.error(`[EmailService] ❌ Échec sur Port 587: ${error.message}`);
+        this.logger.error(`[EmailService] ❌ ÉCHEC DE CONNEXION SMTP : ${error.message}`);
+        this.logger.error(`[EmailService] Détails : ${JSON.stringify(error)}`);
       } else {
-        this.logger.log('[EmailService] ✅ Port 587 opérationnel. Prêt à envoyer !');
+        this.logger.log('[EmailService] ✅ CONNEXION RÉUSSIE : Le serveur peut envoyer des emails !');
       }
     });
   }
 
   async sendOtpEmail(to: string, code: string) {
-    this.logger.log(`[EmailService] 📤 Préparation de l'envoi OTP vers: ${to}`);
+    this.logger.log(`[EmailService] 📧 TENTATIVE D'ENVOI OTP -> ${to}`);
     
-    const subject = '🔐 Code de vérification pour votre reçu';
-    const html = `
-      <div style="font-family: Arial; max-width: 600px; border: 1px solid #eee; padding: 20px;">
-        <h2 style="color: #007bff;">Votre code de vérification</h2>
-        <p style="font-size: 16px;">Voici votre code pour récupérer votre reçu :</p>
-        <div style="background: #f4f4f4; padding: 20px; text-align: center; font-size: 30px; font-weight: bold; letter-spacing: 10px;">
-          ${code}
+    const mailOptions = {
+      from: `"Gestion Concours" <${this.configService.get('EMAIL_USER')}>`,
+      to: to,
+      subject: '🔐 Code de vérification - Récupération de reçu',
+      html: `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #007bff; text-align: center;">Vérification sécurisée</h2>
+          <p>Bonjour,</p>
+          <p>Pour accéder à votre reçu de paiement, veuillez utiliser le code de vérification suivant :</p>
+          <div style="background-color: #f8f9fa; padding: 15px; text-align: center; font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px; border-radius: 5px;">
+            ${code}
+          </div>
+          <p style="margin-top: 20px; font-size: 13px; color: #666;">Ce code expirera dans 10 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
         </div>
-        <p>Ce code expire dans 10 minutes.</p>
-      </div>
-    `;
+      `,
+    };
 
     try {
-      await this.transporter.sendMail({
-        from: `"Gestion Concours" <${this.configService.get('EMAIL_USER')}>`,
-        to,
-        subject,
-        html,
-      });
-      this.logger.log(`[EmailService] 🚀 Email envoyé avec succès à ${to}`);
+      this.logger.log(`[EmailService] ⏳ Envoi en cours via SMTP...`);
+      const info = await this.transporter.sendMail(mailOptions);
+      this.logger.log(`[EmailService] ✅ EMAIL ENVOYÉ ! MessageId: ${info.messageId}`);
+      this.logger.log(`[EmailService] 📢 Réponse SMTP: ${info.response}`);
+      return info;
     } catch (error) {
-      this.logger.error(`[EmailService] ❌ Erreur fatale d'envoi à ${to}: ${error.message}`);
+      this.logger.error(`[EmailService] ❌ ERREUR LORS DE L'ENVOI À ${to}`);
+      this.logger.error(`[EmailService] Raison : ${error.message}`);
+      
+      // On lance une exception propre pour que PaiementService sache que ça a échoué
       throw new InternalServerErrorException("Impossible d'envoyer l'email de vérification.");
     }
   }
-
 
   private async sendMail(to: string, subject: string, html: string) {
     const from = this.configService.get<string>('EMAIL_USER');
