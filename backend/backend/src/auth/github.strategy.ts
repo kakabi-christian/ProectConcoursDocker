@@ -6,10 +6,10 @@ import { Strategy } from 'passport-github2';
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor() {
     super({
-      // L'ajout du "!" garantit à TypeScript que la variable existe dans le .env
       clientID: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      callbackURL: 'http://localhost:3000/auth/github/callback',
+      // MODIFICATION ICI : Utilise la variable d'environnement au lieu de localhost
+      callbackURL: process.env.GITHUB_CALLBACK_URL || 'https://concours-app.up.railway.app/auth/github/callback',
       scope: ['user:email'], 
     });
   }
@@ -17,10 +17,8 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   async validate(accessToken: string, refreshToken: string, profile: any, done: Function) {
     const { username, emails, photos, displayName } = profile;
     
-    // Sécurité : on vérifie si emails existe avant d'accéder à l'index [0]
     const userEmail = emails && emails.length > 0 ? emails[0].value : null;
 
-    // On prépare un objet utilisateur standardisé pour ton AuthService
     const user = {
       email: userEmail,
       nom: displayName || username,
