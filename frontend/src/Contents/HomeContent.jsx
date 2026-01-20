@@ -15,24 +15,13 @@ export default function HomeContent() {
         <div className="row align-items-center">
           {/* LEFT TEXT SECTION */}
           <div className="col-md-6">
-            <h1 className="fw-bold" style={{ lineHeight: "1.2" }}>
+            <h1 className="fw-bold" style={{ lineHeight: "1.2", fontSize:'30px' }}>
               Bienvenue sur notre<br />
-              Plateforme d’inscription de
+              Plateforme de  Système de Gestion d’Enrôlement des Étudiants
+
             </h1>
 
-            <h2
-              className="fw-bold mt-3"
-              style={{
-                color: colorGreen,
-                borderBottom: `4px solid ${colorGreen}`,
-                display: "inline-block",
-                paddingBottom: "3px",
-              }}
-            >
-              ESTLC
-            </h2>
-
-            <p className="mt-3">
+            <p className="mt-1">
               Nous vous recommandons de télécharger l’arrêté de lancement du concours qui
               pourra être utile plus tard. Faites-le en cliquant sur le bouton suivant en
               fonction de votre niveau.

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from "react-router-dom";
 import '../Styles/Header.css';
-import logo from '../Assets/logo app.jpg';
+import logo from '../Assets/logo-sgee.png';
 
 const colorGreen = '#25963F';
 const colorBlue = '#1E90FF';
@@ -28,7 +28,7 @@ export default function Header() {
           {/* Logo */}
           <div className="d-flex align-items-center gap-2">
             <img src={logo} alt="logo-app" className="logo-img" style={{ height: '70px',width: '70px' }} />
-            <p className="fw-bold mb-0" style={{ color: colorGreen, fontSize: '18px' }}>ESTLC</p>
+            {/* <p className="fw-bold mb-0" style={{ color: colorGreen, fontSize: '18px' }}>SGEE</p> */}
           </div>
 
           {/* Button Burger Mobile */}
