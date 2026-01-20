@@ -10,7 +10,6 @@ export class EmailService implements OnModuleInit {
 
   constructor(private readonly configService: ConfigService) {}
 
-  // OnModuleInit assure que l'initialisation se fait au lancement du module NestJS
   async onModuleInit() {
     this.logger.log('--- 🚀 [INIT] DÉMARRAGE DU SERVICE EMAIL AVEC MAILJET ---');
     await this.initializeTransporter();
@@ -19,8 +18,6 @@ export class EmailService implements OnModuleInit {
   private async initializeTransporter() {
     const apiKey = this.configService.get<string>('MAILJET_API_KEY');
     const apiSecret = this.configService.get<string>('MAILJET_SECRET_KEY');
-
-    this.logger.debug(`[CONFIG] Vérification des clés Mailjet...`);
 
     if (!apiKey || !apiSecret) {
       this.logger.error('❌ [CONFIG ERROR] MAILJET_API_KEY ou MAILJET_SECRET_KEY manquante !');
@@ -31,38 +28,40 @@ export class EmailService implements OnModuleInit {
       this.transporter = nodemailer.createTransport({
         host: 'in-v3.mailjet.com',
         port: 587,
-        secure: false, 
+        secure: false, // false obligatoire pour STARTTLS sur le port 587
         auth: {
           user: apiKey,
           pass: apiSecret,
         },
         tls: {
-          rejectUnauthorized: false,
+          rejectUnauthorized: false, // Évite les blocages de certificats sur Railway/Docker
           minVersion: 'TLSv1.2'
         },
-        connectionTimeout: 15000,
+        // Paramètres augmentés pour éviter le "Connection timeout"
+        connectionTimeout: 30000, 
+        greetingTimeout: 30000,
+        socketTimeout: 45000,
       });
 
-      // On attend la vérification avant de dire que c'est prêt
+      // Vérification immédiate de la connexion au démarrage
       await this.transporter.verify();
       this.logger.log('✅ [SMTP READY] Connexion Mailjet établie avec succès !');
     } catch (error) {
-      this.logger.error(`❌ [SMTP ERROR] La configuration a échoué : ${error.message}`);
+      this.logger.error(`❌ [SMTP ERROR] La connexion a échoué : ${error.message}`);
     }
   }
 
   private async sendMail(to: string, subject: string, html: string) {
-    // 🛡️ SÉCURITÉ ANTI-CRASH : Si le transporter est indéfini, on tente de le recréer ou on throw proprement
     if (!this.transporter) {
-      this.logger.warn('⚠️ Transporter non prêt, tentative de réinitialisation d\'urgence...');
+      this.logger.warn('⚠️ Transporter non prêt, tentative de réinitialisation...');
       await this.initializeTransporter();
-      
       if (!this.transporter) {
-        throw new InternalServerErrorException("Le service email n'est pas configuré (transporter undefined).");
+        throw new InternalServerErrorException("Service email non disponible.");
       }
     }
 
-    const from = `"Gestion Concours" <kakabichristian7@gmail.com>`;
+    // IMPORTANT : Utilisation de l'adresse validée SANS le chiffre 7
+    const from = `"Gestion Concours" <kakabichristian@gmail.com>`;
     const mailOptions = { from, to, subject, html };
 
     this.logger.warn(`--- 📥 [TENTATIVE D'ENVOI] ---`);
@@ -85,10 +84,16 @@ export class EmailService implements OnModuleInit {
   async sendOtpEmail(to: string, code: string) {
     this.logger.log(`[OTP] Envoi code ${code} à ${to}`);
     const subject = '🔐 Code de vérification pour votre reçu';
-    const html = `<div style="font-family: Arial; padding: 20px; border: 1px solid #eee;">
-                    <h2>Code : ${code}</h2>
-                    <p>Ce code expire dans 10 minutes.</p>
-                  </div>`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
+        <h2 style="color: #2c3e50;">Votre code de vérification</h2>
+        <div style="font-size: 24px; font-weight: bold; color: #3498db; padding: 10px; background: #f9f9f9; display: inline-block;">
+          ${code}
+        </div>
+        <p>Ce code est valable pendant 10 minutes. Ne le partagez avec personne.</p>
+        <hr style="border: none; border-top: 1px solid #eee;" />
+        <small>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</small>
+      </div>`;
     return await this.sendMail(to, subject, html);
   }
 
@@ -101,7 +106,7 @@ export class EmailService implements OnModuleInit {
   async sendDossierStatusUpdate(to: string, userName: string, status: string, concoursNom: string, commentaire?: string) {
     const isValid = status === 'VALIDATED';
     const subject = isValid ? '✅ Dossier Validé' : '⚠️ Dossier Rejeté';
-    const html = `<h3>Bonjour ${userName}</h3><p>Votre dossier pour ${concoursNom} est ${status}.</p>`;
+    const html = `<h3>Bonjour ${userName}</h3><p>Votre dossier pour ${concoursNom} est désormais : ${status}.</p>`;
     return await this.sendMail(to, subject, html);
   }
 
@@ -111,7 +116,7 @@ export class EmailService implements OnModuleInit {
   async sendResetPasswordEmail(to: string, resetToken: string) {
     const url = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
     const link = `${url}/reset-password?token=${resetToken}`;
-    const html = `<p>Réinitialisation : <a href="${link}">${link}</a></p>`;
-    return await this.sendMail(to, 'Réinitialisation mot de passe', html);
+    const html = `<p>Pour réinitialiser votre mot de passe, cliquez ici : <a href="${link}">${link}</a></p>`;
+    return await this.sendMail(to, 'Réinitialisation de mot de passe', html);
   }
 }
