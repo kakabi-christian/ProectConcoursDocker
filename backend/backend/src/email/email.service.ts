@@ -1,81 +1,85 @@
 import { Injectable, Logger, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
+import Mailjet from 'node-mailjet';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: Transporter;
+  private mailjet: Mailjet;
 
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
-    this.logger.log('--- 🚀 [INIT] DÉMARRAGE DU SERVICE EMAIL AVEC MAILJET ---');
-    await this.initializeTransporter();
+    this.logger.log('--- 🚀 [INIT] DÉMARRAGE DU SERVICE EMAIL VIA API MAILJET ---');
+    this.initializeMailjet();
   }
 
-  private async initializeTransporter() {
+  private initializeMailjet() {
     const apiKey = this.configService.get<string>('MAILJET_API_KEY');
     const apiSecret = this.configService.get<string>('MAILJET_SECRET_KEY');
 
     if (!apiKey || !apiSecret) {
-      this.logger.error('❌ [CONFIG ERROR] MAILJET_API_KEY ou MAILJET_SECRET_KEY manquante !');
+      this.logger.error('❌ [CONFIG ERROR] Clés API Mailjet (Public/Secret) manquantes !');
       return;
     }
 
     try {
-      this.transporter = nodemailer.createTransport({
-        host: 'in-v3.mailjet.com',
-        port: 2525,
-        secure: false, // false obligatoire pour STARTTLS sur le port 587
-        auth: {
-          user: apiKey,
-          pass: apiSecret,
-        },
-        tls: {
-          rejectUnauthorized: false, // Évite les blocages de certificats sur Railway/Docker
-          minVersion: 'TLSv1.2'
-        },
-        // Paramètres augmentés pour éviter le "Connection timeout"
-        connectionTimeout: 30000, 
-        greetingTimeout: 30000,
-        socketTimeout: 45000,
+      this.mailjet = new Mailjet({
+        apiKey: apiKey,
+        apiSecret: apiSecret
       });
-
-      // Vérification immédiate de la connexion au démarrage
-      await this.transporter.verify();
-      this.logger.log('✅ [SMTP READY] Connexion Mailjet établie avec succès !');
+      this.logger.log('✅ [API READY] Client Mailjet initialisé sur le port 443');
     } catch (error) {
-      this.logger.error(`❌ [SMTP ERROR] La connexion a échoué : ${error.message}`);
+      this.logger.error(`❌ [INIT ERROR] Échec de l'initialisation API : ${error.message}`);
     }
   }
 
   private async sendMail(to: string, subject: string, html: string) {
-    if (!this.transporter) {
-      this.logger.warn('⚠️ Transporter non prêt, tentative de réinitialisation...');
-      await this.initializeTransporter();
-      if (!this.transporter) {
-        throw new InternalServerErrorException("Service email non disponible.");
+    if (!this.mailjet) {
+      this.logger.warn('⚠️ Client Mailjet non prêt, tentative de réinitialisation...');
+      this.initializeMailjet();
+      if (!this.mailjet) {
+        throw new InternalServerErrorException("Le service email (API) n'est pas disponible.");
       }
     }
 
-    // IMPORTANT : Utilisation de l'adresse validée SANS le chiffre 7
-    const from = `"Gestion Concours" <kakabichristian@gmail.com>`;
-    const mailOptions = { from, to, subject, html };
-
-    this.logger.warn(`--- 📥 [TENTATIVE D'ENVOI] ---`);
+    // Utilisation de ton adresse validée sur Mailjet
+    const fromEmail = "kakabichristian@gmail.com";
+    
+    this.logger.warn(`--- 📥 [TENTATIVE D'ENVOI API] ---`);
     this.logger.log(`[DESTINATAIRE]: ${to}`);
 
     try {
-      this.logger.log(`[PROCESS] ⏳ Envoi en cours via Mailjet...`);
-      const info = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ [SUCCÈS] Email envoyé | MessageId: ${info.messageId}`);
-      return info;
+      this.logger.log(`[PROCESS] ⏳ Envoi en cours via API HTTP...`);
+      
+      const result = await this.mailjet
+        .post("send", { version: 'v3.1' })
+        .request({
+          Messages: [
+            {
+              From: {
+                Email: fromEmail,
+                Name: "Gestion Concours"
+              },
+              To: [
+                {
+                  Email: to
+                }
+              ],
+              Subject: subject,
+              HTMLPart: html,
+            }
+          ]
+        });
+
+      this.logger.log(`✅ [SUCCÈS] Email envoyé via API HTTP`);
+      return result.body;
     } catch (error) {
-      this.logger.error(`❌ [SEND ERROR] Échec de l'envoi à ${to}`);
-      this.logger.error(`[CAUSE]: ${error.message}`);
-      throw new InternalServerErrorException(`Erreur d'envoi email: ${error.message}`);
+      this.logger.error(`❌ [API ERROR] Échec de l'envoi à ${to}`);
+      // Log plus détaillé pour voir l'erreur exacte retournée par Mailjet
+      const errorDetail = error.response?.body || error.message;
+      this.logger.error(`[CAUSE]: ${JSON.stringify(errorDetail)}`);
+      throw new InternalServerErrorException(`Erreur API Mailjet: ${error.message}`);
     }
   }
 
@@ -87,12 +91,12 @@ export class EmailService implements OnModuleInit {
     const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 8px;">
         <h2 style="color: #2c3e50;">Votre code de vérification</h2>
-        <div style="font-size: 24px; font-weight: bold; color: #3498db; padding: 10px; background: #f9f9f9; display: inline-block;">
+        <div style="font-size: 24px; font-weight: bold; color: #3498db; padding: 10px; background: #f9f9f9; display: inline-block; border-radius: 4px;">
           ${code}
         </div>
         <p>Ce code est valable pendant 10 minutes. Ne le partagez avec personne.</p>
         <hr style="border: none; border-top: 1px solid #eee;" />
-        <small>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</small>
+        <small style="color: #7f8c8d;">Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</small>
       </div>`;
     return await this.sendMail(to, subject, html);
   }
@@ -104,9 +108,8 @@ export class EmailService implements OnModuleInit {
   }
 
   async sendDossierStatusUpdate(to: string, userName: string, status: string, concoursNom: string, commentaire?: string) {
-    const isValid = status === 'VALIDATED';
-    const subject = isValid ? '✅ Dossier Validé' : '⚠️ Dossier Rejeté';
-    const html = `<h3>Bonjour ${userName}</h3><p>Votre dossier pour ${concoursNom} est désormais : ${status}.</p>`;
+    const subject = status === 'VALIDATED' ? '✅ Dossier Validé' : '⚠️ Dossier Rejeté';
+    const html = `<h3>Bonjour ${userName}</h3><p>Votre dossier pour ${concoursNom} est désormais : <strong>${status}</strong>.</p>`;
     return await this.sendMail(to, subject, html);
   }
 
