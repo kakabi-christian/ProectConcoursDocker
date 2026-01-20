@@ -27,7 +27,7 @@ export class EmailService implements OnModuleInit {
     try {
       this.transporter = nodemailer.createTransport({
         host: 'in-v3.mailjet.com',
-        port: 587,
+        port: 2525,
         secure: false, // false obligatoire pour STARTTLS sur le port 587
         auth: {
           user: apiKey,
