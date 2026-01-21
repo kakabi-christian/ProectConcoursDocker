@@ -11,8 +11,7 @@ import {
 import { getMyArchivesBySpeciality, getAnnees } from '../services/archiveService';
 import api from '../services/api';
 
-const API_BASE_URL = 'http://localhost:3000';
-
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 const colorGreen = "#25963F";
 const colorBlue = "#1E90FF";
 

@@ -21,7 +21,7 @@ export default function ArchiveContent() {
   const [selectedSpecialite, setSelectedSpecialite] = useState('');
   const [selectedEpreuve, setSelectedEpreuve] = useState('');
 
-  const API_BASE_URL = 'http://localhost:3000';
+  const API_BASE_URL = process.env.REACT_APP_API_URL;
 
   // 1. Charger les années et départements
   useEffect(() => {

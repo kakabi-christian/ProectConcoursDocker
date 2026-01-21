@@ -108,7 +108,7 @@ export default function HomeContent() {
       <div className="container-fluid mt-5 py-5" style={{ backgroundColor: colorLightGray }}>
         <div className="container">
           <h2 className="text-center fw-bold mb-5" style={{ color: colorBlue }}>
-            Concours ESTLC en Chiffres
+            Concours SGEE en Chiffres
           </h2>
           <div className="row text-center">
             {/* Statistique 1: Inscriptions */}

@@ -197,10 +197,7 @@ const CandidatComponent = () => {
           <p className="text-muted mb-0">Filtrage par concours, session et répartition</p>
         </div>
         <div className="d-flex gap-2">
-          <button className="btn btn-primary rounded-pill px-4 shadow-sm fw-bold" onClick={handleDispatch} disabled={isDispatching || !filters.concoursId}>
-            {isDispatching ? <BiLoaderAlt className="spinner-border spinner-border-sm me-2" /> : <BiLayer className="me-2" />}
-            Lancer Dispatching
-          </button>
+          
           <button className="btn btn-danger rounded-pill px-4 shadow-sm fw-bold" onClick={() => candidatService.exportToPdf(filters)} disabled={isExporting}>
             <BiDownload className="me-2" /> Export PDF
           </button>
@@ -291,7 +288,7 @@ const CandidatComponent = () => {
             <thead className="bg-primary text-white">
               <tr>
                 <th className="px-4 py-3 border-0">CANDIDAT / SEXE</th>
-                <th className="py-3 border-0 text-center">SALLE / TABLE</th>
+                {/* <th className="py-3 border-0 text-center">SALLE / TABLE</th> */}
                 <th className="py-3 border-0 text-center">STATUT</th>
                 <th className="py-3 border-0">FILIÈRE / SPÉCIALITÉ</th>
                 <th className="text-end px-4 py-3 border-0">ACTIONS</th>
@@ -312,10 +309,7 @@ const CandidatComponent = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="text-center">
-                      <div className="fw-bold text-primary">{c.salle || '---'}</div>
-                      <small className="text-muted">{c.numeroTable ? `Place: ${c.numeroTable}` : ''}</small>
-                    </td>
+                    
                     <td className="text-center">{getStatusBadge(c.dossier?.statut)}</td>
                     <td>
                       <div className="small text-dark fw-bold">{c.filiere}</div>
