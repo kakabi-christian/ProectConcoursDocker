@@ -47,13 +47,10 @@ import { CampayModule } from './campay/campay.module';
 @Module({
   imports: [
     // ✅ CORRECTION ICI (IMPORTANT)
-   ServeStaticModule.forRoot({
-  rootPath: join(process.cwd(), 'uploads'),
-  serveRoot: '/uploads',
-  serveStaticOptions: {
-    index: false, // Empêche de chercher index.html (ton erreur actuelle !)
-  },
-}),
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+    }),
 
     // Configuration globale de l'environnement
     ConfigModule.forRoot({ isGlobal: true }),
