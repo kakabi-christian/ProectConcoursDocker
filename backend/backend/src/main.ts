@@ -2,24 +2,31 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path'; // Ajouté pour gérer les chemins de dossiers
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // ✅ Autoriser les requêtes venant de ton Frontend en ligne
+  // ✅ SERVIR LES FICHIERS STATIQUES (Images, PDF)
+  // Indispensable pour que https://.../uploads/dossiers/fichier.jpg fonctionne
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
+  });
+
+  // ✅ CONFIGURATION CORS
   app.enableCors({
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
-      'https://concours-frontend.up.railway.app', // URL de ton interface
+      'https://concours-frontend.up.railway.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
-  // ✅ Configuration Swagger
+  // ✅ CONFIGURATION SWAGGER
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
     .setDescription('Documentation de mon API NestJS avec Swagger')
@@ -30,10 +37,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // ✅ Configuration du port pour Railway
+  // ✅ CONFIGURATION PORT (RAILWAY)
   const port = process.env.PORT ?? 3000;
   
-  // Important : écouter sur 0.0.0.0 pour que Railway puisse router le trafic
+  // Ecouter sur 0.0.0.0 est obligatoire pour Railway
   await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 API disponible sur: https://concours-app.up.railway.app`);
