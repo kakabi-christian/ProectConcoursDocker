@@ -3,9 +3,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DocStatus, Prisma, NotificationType } from '@prisma/client'; 
 import { UpdateDossierStatusDto } from './dto/update-dossier-status.dto';
 import { NotificationService } from '../notification/notification.service';
-import { WhatsappService } from 'src/whatsapp/whatsapp.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 import * as QRCode from 'qrcode';
-import { EmailService } from 'src/email/email.service';
+import { EmailService } from '../email/email.service'; // <- modifié de 'src/email/email.service' en chemin relatif
+
 
 @Injectable()
 export class DossierService {

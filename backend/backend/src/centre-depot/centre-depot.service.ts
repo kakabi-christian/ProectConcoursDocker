@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+// import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateCentreDepotDto } from './dto/update-centre-depot.dto';
 import { CreateCentreDepotDto } from './dto/create-centre-depot.dto';
 import { Prisma } from '@prisma/client'; // Importez Prisma pour le typage strict
+import { PrismaService } from '../prisma/prisma.service';
+
 
 @Injectable()
 export class CentreDepotService {

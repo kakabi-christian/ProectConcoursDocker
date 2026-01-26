@@ -1,6 +1,6 @@
 // src/piecedossier/piecedossier.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreatePieceDossierDto } from './dto/create-piecedossier.dto';
 import { UpdatePieceDossierDto } from './dto/update-piecedossier.dto';
 
