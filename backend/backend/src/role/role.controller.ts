@@ -59,7 +59,7 @@ export class RoleController {
 
   @Patch(':id/permissions')
   @Permissions(UserType.SUPERADMIN)
-  @Permissions('assigner_permissions_role')
+  // @Permissions('assigner_permissions_role')
   @UseGuards(PermissionsGuard)
   async assignPermissions(
     @Param('id') id: string,
