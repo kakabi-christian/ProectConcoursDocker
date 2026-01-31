@@ -57,14 +57,14 @@ export class RoleController {
     return this.roleService.remove(id);
   }
 
-  @Patch(':id/permissions')
-  @Permissions(UserType.SUPERADMIN)
-  // @Permissions('assigner_permissions_role')
-  @UseGuards(PermissionsGuard)
-  async assignPermissions(
-    @Param('id') id: string,
-    @Body('permissionIds') permissionIds: string[]
-  ) {
-    return this.roleService.assignPermissions(id, permissionIds);
-  }
+@Patch(':id/permissions')
+@Permissions('assigner_permissions_role')
+@UseGuards(PermissionsGuard)
+async assignPermissions(
+  @Param('id') id: string,
+  @Body('permissionIds') permissionIds: string[]
+) {
+  return this.roleService.assignPermissions(id, permissionIds);
+}
+
 }
