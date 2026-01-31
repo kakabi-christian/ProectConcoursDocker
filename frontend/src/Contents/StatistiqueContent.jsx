@@ -511,71 +511,7 @@ export default function StatistiqueContent() {
 
        
       </div>
-       {/* Concours */}
-        <div className="col-lg-12">
-          <div className="card border-0 shadow-lg h-100" style={{ borderRadius: '20px' }}>
-            <div className="card-header border-0 py-4 px-4" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }}>
-              <h5 className="mb-0 text-white fw-bold d-flex align-items-center">
-                <i className="bi bi-trophy-fill me-2"></i>
-                Statistiques par Concours
-              </h5>
-            </div>
-            <div className="card-body p-4">
-              {stats.concours.candidatsParConcours.map((concours, idx) => (
-                <div key={concours.concours} className={`p-4 rounded-3 ${idx > 0 ? 'mt-3' : ''}`} style={{ backgroundColor: '#eff6ff', border: '2px solid #dbeafe' }}>
-                  <h6 className="fw-bold text-primary mb-3">{concours.concours}</h6>
-                  <div className="row g-3">
-                    <div className="col-md-4">
-                      <div className="d-flex align-items-center">
-                        <i className="bi bi-people-fill text-primary me-2 fs-5"></i>
-                        <div>
-                          <div className="small text-muted">Candidats</div>
-                          <div className="fw-bold">{concours.nbCandidats}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="d-flex align-items-center">
-                        <i className="bi bi-cash-stack text-success me-2 fs-5"></i>
-                        <div>
-                          <div className="small text-muted">Total</div>
-                          <div className="fw-bold">{formatCurrency(concours.montantTotal)}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-md-4">
-                      <div className="d-flex align-items-center">
-                        <i className="bi bi-graph-up text-info me-2 fs-5"></i>
-                        <div>
-                          <div className="small text-muted">Moyen</div>
-                          <div className="fw-bold">{formatCurrency(concours.montantMoyen)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-top">
-                    {stats.concours.statutPaiementsParConcours.filter(s => s.concours === concours.concours).map(statut => (
-                      <div key={statut.concours} className="d-flex gap-2 flex-wrap">
-                        <span className="badge bg-success px-3 py-2">
-                          <i className="bi bi-check-circle me-1"></i>
-                          Succès: {statut.SUCCESS}
-                        </span>
-                        <span className="badge bg-warning px-3 py-2">
-                          <i className="bi bi-clock me-1"></i>
-                          En attente: {statut.PENDING}
-                        </span>
-                        <span className="badge bg-danger px-3 py-2">
-                          <i className="bi bi-x-circle me-1"></i>
-                          Échoué: {statut.FAILED}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div> <br />
+     
 
       {/* Section inférieure */}
       <div className="row g-4 mb-5">
